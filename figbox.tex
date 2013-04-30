@@ -1,0 +1,634 @@
+% 12 Oct 90 LaTeX figure boxing macros  by Jack Snoeyink
+%                                       w/ ideas from John Hershberger
+%                                       and code from Tom Rokicki
+%%%%%%%%%%%%%%%%%
+% 
+% This file contains two classes of macros for dealing with figures in
+% Latex documents:  
+%  \figbox (and its relatives) take a box containing a figure or table
+%    or whatever, caption it, and either place it on the page and wrap the
+%    text around it or let it float (as usual).
+%  \boxeps and \boxps take encasulated or plain postscript from a file
+%    and put it in a box for use by \figbox
+%
+%%%%%%%%%%%%%%%%
+%
+% The most important macro for dealing with boxes is:
+%
+% \figbox: caption a box as a figure or table and place it in the margin
+%       (a marginal box) or float it (a floating box).
+%       Wide marginal boxes are promoted to one column floats; wide one
+%       column floats are promoted to two column floats.
+%
+% Usage: \figbox [*htblr] {box} {style} {label} {caption}
+%
+% The optional argument default is [htb].  Other choices
+%   * two column (must come first),
+%   h here, t top, b bottom (as in latex),
+%   l left, r right (marginal boxes that do not float)
+%
+% NB: Left and right marginal boxes will not overlap in height.
+%
+% Two column figures default to htb unless some other 
+%       options follow the *.
+%   They can also be specified by style {figure*} or {table*}.
+%
+% box is a box containing a figure or table.
+% style is the caption style {figure}, {figure*}, {table}, or {table*}.  
+% label is the label assigned.
+%       if empty, the figure will not be labeled.
+% caption is of the form {}, {Caption} or {[short caption] Long caption},
+%       where the short caption goes into the list of figures/tables.
+%       if empty, the figure will not be captioned or labeled.
+% 
+% The lower level macro \captionbox, described much later, can be used
+% to combine two or more captioned figures into a single marginal or
+% floating box.
+%
+%%%%%%%%%%%%%%%%
+%
+% options defined by macros are: \captionstyle \boxcaptionstyle
+% \maxfigfraction \figboxhang \figboxmargin 
+%
+% \captionstyle is executed for all floating box captions
+% \boxcaptionstyle is executed for all marginal box captions.
+%       Default \raggedright
+% \maxfigfraction is the maximum fraction of a column that can be taken up
+%       by a marginal box before it gets converted to a float.
+%       Default .6
+% dimen \figboxhang is the distance a marginal box hangs into the margin.
+%       Default 0pt
+% dimen \figboxmargin is the width of space between the text and a
+%       marginal box. 
+%       Default .15in
+%
+%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%
+%
+% The most important macros for turning postscript into boxes are:
+% 
+% \boxeps: Form a box containing encapsulated postscript from a file at a
+%       given scale.
+% \boxps: Form a box containing postscript from a file at a given scale, 
+%       width, and height.
+% 
+%
+% Usage: \boxeps[local commands] {file} {scale}
+%        \boxps[local commands] {file} {scale} {width} {height}
+%
+% The optional local commands are executed after scaling. As described
+%       below, they are useful for setting origins, non-uniform scaling, etc?
+% file is the filename in the \figuredirectory and without the .ps
+%       extension.
+% scale is a real number: 1 to use the drawn size.  0.9 to use 90% of
+%       drawn size.  Can be changed by local commands. (see below)
+% width and height are dimensions of the box produced by \boxps.
+%
+%%%%%%%%%%%%%%%%
+%
+% options: \DVIscaling \figuredirectory \missingfigure \boxer
+% local commands: \horizscale \vertscale
+%
+% \DVIscaling is the number the dvi to ps converter considers a unit
+%       scaling transformation.  Default: 1 for dvi2ps  --- 100 for
+%       some of Rokicki's versions of dvips.
+%
+% \globalscaling is the scaling applied to every picture --- useful
+%       for making double size figures for journals.  Default: 1
+%
+% \figuredirectory is the pathname where figure postscript files are kept.
+%       Default: ./figure
+%
+% \missingfigure{file} is executed when the file is not found.
+%       Default: \def\missingfigure#1{\hbox{Missing figure #1.ps}}
+%
+% \boxer is the command used by \boxps to make a box of the desired size
+%       containing the figure.  Possible commands depend on the origin of
+%       the figure, and include \llboxer \lcboxer \ulboxer and \ccboxer.
+%       (ll = lower left, ul = upper left, cc = dead center, etc.)
+%       \boxer can be defined in the local commands or globally.
+%
+% Local commands \horizscale, and \vertscale can scale the picture
+%       horizontally and vertically by different factors.  \scale
+%       scales the picture uniformly.  Scales accumulate.
+%
+%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%
+%
+% Default options
+%
+
+\def\captionstyle{}
+\def\boxcaptionstyle{\raggedright}
+
+\def\maxfigfraction{.6}%        --- max frac of column for marg figure
+
+\newdimen\figboxmargin%         --- margin between text and picture
+\figboxmargin = .15in
+
+\newdimen\figboxhang%           --- amount to hang picture into margin
+\figboxhang = 0pt
+
+\def\DVIscaling{1}%             --- for dvi2ps
+\def\globalscaling{1}%          --- for scaling everything
+\def\figuredirectory{./figures}%--- where to find the .ps files 
+\let\boxer=\llboxer%            --- default origin in lower left for non-
+%                                     encapsulated postscript figures
+
+\def\missingfigure#1{\hbox{Missing figure #1.ps}}
+
+
+%%%%%%%%%%%%%%%%
+%
+% Use latex internals
+%
+\catcode `\@=11
+\special{! /@scaleunit 1 def }
+
+\newbox\figurebox
+
+\def\figbox{%   [place] box style label caption
+\@ifnextchar[{\figboxaux}{\figboxaux[htb]}}
+
+%
+% Parse position parameters and try appropriate placement
+%
+\long\def\figboxaux[#1#2]#3#4#5#6{%     --- want left margin figure?
+\writepict{{#3}{#4}{#5}{#6}}%           --- save figure if journalpicts
+\setbox\figurebox\hbox{#3}%
+\if l#1\tryleftbox{#4}{#5}{#6}%
+\else%                                  --- want right margin figure?
+\if r#1\tryrightbox{#4}{#5}{#6}%
+\else%                                  --- want one or two column figure?
+\if *#1\checktwocoloptions#2]{\box\figurebox}{#4*}{#5}{#6}%
+\else\tryonecol[#1#2]{#4}{#5}{#6}%
+\fi
+\fi
+\fi\ignorespaces}
+
+%
+% Try a placement; promote if too wide
+%
+
+\long\def\tryleftbox#1#2#3{%            --- does left margin figure fit?
+\ifdim\wd\figurebox>\maxfigfraction\columnwidth \tryonecol[htb]{#1}{#2}{#3}%
+\else\leftbox{\captionbox{\box\figurebox}{#1}{#2}{#3}}\fi}
+
+\long\def\tryrightbox#1#2#3{%   --- does right margin figure fit?
+\ifdim\wd\figurebox>\maxfigfraction\columnwidth \tryonecol[htb]{#1}{#2}{#3}%
+\else\rightbox{\captionbox{\box\figurebox}{#1}{#2}{#3}}\fi}
+
+\def\checktwocoloptions{%       --- make sure twocol has htb or p
+\@ifnextchar]{\floatbox[htb}{\floatbox[}}
+
+\long\def\tryonecol[#1]#2#3#4{% --- does one column figure fit?
+\ifdim\wd\figurebox>\columnwidth \floatbox[#1]{\box\figurebox}{#2*}{#3}{#4}%
+\else\floatbox[#1]{\box\figurebox}{#2}{#3}{#4}\fi}
+
+%
+% Do the work for a floating box.
+%
+% \floatbox[place]{box} {style} {label} {caption}
+%
+
+\long\def\floatbox[#1]#2#3#4#5{%
+\begin{#3}[#1]
+\hbox to \hsize{\hfil#2\hfil}
+\captionandlabel{#3}{#4}{#5}
+\end{#3}
+}
+
+
+%
+% Make a caption the width of the box with given style. 
+%
+%\captionbox {box} {style} {label} {[optshortcap] caption}
+%
+% options: \boxcaptionstyle 
+%
+%%%%%%%%%%%%%%%%
+%
+% This can be used with box commands (\hbox, \vbox, \mbox, and the like),
+% along with \figbox with an empty caption, to place two or more captioned
+% boxes in a single marginal or floating box.   
+%
+% e.g. \figbox{\hbox{
+%                    \captionbox{ \boxeps{fig1}1} {figure} {f1} {a figure}
+%                    \hskip 1in
+%                    \captionbox{ \boxeps{tab1}1} {table} {t1} {a table}
+%                   }} {figure} {ignored-label} {}
+%
+
+\long\def\captionbox#1#2#3#4{% box style label {[optshortcap] caption}
+\setbox\figurebox\hbox{#1}%
+\parbox[t]{\wd\figurebox}{%
+\bigskip\box\figurebox
+\let\captionstyle=\boxcaptionstyle
+\captionandlabel{#2}{#3}{#4}
+\bigskip
+}}
+
+%                               --- caption and label if label is nonempty
+\def\captionandlabel#1#2#3{%    --- {style} {label} {caption}
+\def\testit{#3}%
+\ifx\testit\empty\else%         --- if non empty caption
+\writecapt{{#1}{#2}{#3}}%       --- save for journal figs
+\captypeunstarred#1*.%          --- remove optional stars
+\getcaption#3\endc@ption%       --- parse the caption
+\def\testit{#2}%                --- check for empty label
+\ifx\testit\empty\else\label{#2}\fi
+\fi}
+
+\def\captypeunstarred#1*#2.{%   --- remove two-column star from style
+\def\@captype{#1}}
+
+%
+% Parse the caption of the form {caption} or {[short] long caption} 
+%
+
+\def\getcaption{\@ifnextchar[{\getcaptwo}{\getcapone}}
+\long\def\getcapone#1\endc@ption{\caption[#1]%
+{\def\baselinestretch{1}\Large\normalsize\captionstyle\ignorespaces #1}}
+\long\def\getcaptwo[#1]#2\endc@ption{\caption[#1]%
+{\def\baselinestretch{1}\Large\normalsize\captionstyle\ignorespaces #2}}
+
+%
+% Do the right thing with an already captioned marginal box
+%
+% \leftbox{box}
+% \rightbox{box}
+%
+% options: \figboxmargin \figboxhang \figuredirectory
+
+\newdimen\figboxht
+\newcount\figboxn
+
+
+\newcount\figboxlines%          --- picture height in number of lines
+\newdimen\figboxwid%            --- picture width
+
+\newif\ifisleftbox
+
+\long\def\leftbox#1{%
+\setbox\figurebox\hbox{#1}\global\isleftboxtrue
+\startmarginbox
+\vadjust{\smash{\rlap{\hskip\hsize\hskip\figboxhang
+\llap{\raise.7\baselineskip\box\figurebox\hskip\rightskip}}}}%
+\endmarginbox%
+}
+
+\long\def\rightbox#1{%
+\setbox\figurebox\hbox{#1}\global\isleftboxfalse
+\startmarginbox
+\smash{\llap{\raise.7\baselineskip\box\figurebox\hskip\figboxmargin}}%
+\endmarginbox%
+}
+
+\def\startmarginbox{%
+\ifvmode\passpict\let\endmarginbox=\indent
+\else\message{WARNING: marginbox in not in vmode}\hfilneg\ \passpict
+\let\endmarginbox=\relax\fi
+%
+\figboxht=\dp\figurebox%         actual height
+\advance\figboxht by 1.3\baselineskip% round up
+\vskip.95\figboxht\penalty-300\vskip-.95\figboxht% filbreak trick
+\divide\figboxht by\baselineskip%      how many lines?
+\global\figboxlines=\figboxht
+%
+\global\figboxwid=\wd\figurebox
+\global\advance\figboxwid by \figboxmargin
+\global\advance\figboxwid by -\figboxhang
+\setmypar\noindent}
+%
+
+%
+% Useful macros
+%
+% for lengthening (and shortening) picture space
+%
+\def\addlines#1{\global\advance\figboxlines by #1\myparshape}
+\def\zerolines{\origpar\global\figboxlines=0\myparshape}
+
+%
+% for passing any marginal figures
+%
+\def\passpict{\par\ifnum\figboxlines>1\vskip\figboxlines\baselineskip
+\zerolines\fi}
+
+\def\emptybox#1#2{\hbox to #1{\vbox to #2{\vss}\hss}}
+
+%%%%%%%%%%%%%%%%%%%%%
+%\par hacking  
+% We define our own version of Tex's \par and tell Latex it is the original
+
+\global\let\origpar=\@@par%     --- Latex's saved version of Tex's \par
+\global\let\dopar=\origpar
+\global\def\@@par{\dopar}
+\@setpar{\dopar}
+
+\def\setmypar{\global\let\dopar=\mypar
+\global\prevgraf=0\myparshape}
+
+\def\mypar{\origpar\global\advance\figboxlines by -\prevgraf%
+\global\prevgraf=0\myparshape}
+
+\def\myparshape{\relax%
+\ifnum\figboxlines>1\theparshape \else
+\global\hangindent=0pt\global\hangafter=1%  these sometimes get restored...
+\global\let\dopar=\origpar\fi}
+
+\def\theparshape{%
+\ifisleftbox\global\hangindent=-\figboxwid 
+\else\global\hangindent=\figboxwid \fi
+\global\hangafter=-\figboxlines \global\advance\hangafter by 1%
+}
+
+
+%%%%%%%%%%%%%%%%
+%
+%  Macros to make the list of figures and captions used by journals
+%
+%  To use, execute \journalpicts{scalefactor} at the beginning of the
+%  file.  All figbox figures and tables will be written to a .pic file
+%  and all captions to a .cap file.  On \enddocument, these files are
+%  read in and the lists of figures and captions are produced.
+%  
+%  For non-english versions, or to add other types of floats, the
+%  macro \definefnum should be changed.
+%
+
+\def\definefnum#1{%             --- ugly latex hacking to get the
+%                                       right figure/table name 
+\def\fnum@figure{Figure \ref{#1}}%
+\def\fnum@table{Table \ref{#1}}%
+\def\fnum@code{Algorithm \ref{#1}}%
+}
+
+\def\writepict#1{}
+\def\writecapt#1{}
+
+%%%%%%%%%%%%%%%%
+% \journalpicts{globalscalefactor} writes all pictures and captions to
+%       files and modifies \enddocument to read these files and
+%       produce lists of enlarged figures and of captions
+% 
+
+\def\journalpicts#1{%           global scale factor
+\newwrite\pictfile
+\newwrite\captfile
+%
+\openout\pictfile\jobname.pic
+\openout\captfile\jobname.cap
+%
+\gdef\writepict##1{\unexpandedwrite\pictfile{\doit##1}}%
+\gdef\writecapt##1{\unexpandedwrite\captfile{\doit##1}}%
+%
+\global\let\ENDdocument=\enddocument
+\gdef\enddocument{\DOjournalpicts{#1}\ENDdocument}
+}
+
+%
+%       generate enlarged figures 1 per page and list captions
+%
+\def\DOjournalpicts#1{{%
+\def\writepict##1{}\closeout\pictfile
+\def\writecapt##1{}\closeout\captfile
+\@fileswfalse%                  --- turn off toc, lof, and so on.
+%
+\onecolumn
+\def\globalscaling{#1}
+\def\doit##1##2##3##4{%         --- print a picture on blank page
+%                                       {box}{style}{label}{caption}
+\figboxaux[t]{\hss##1\hss}{##2}{}{}%
+\vspace*{1in}
+\definefnum{##3}%               --- use Figure \ref{label} or Table \ref{label}
+\captionandlabel{##2}{}{##4}
+\clearpage}%
+%
+\input\jobname.pic
+%
+\def\doit##1##2##3{%            --- print caption
+%                                       {style}{label}{caption}
+\definefnum{##2}%               --- use Figure \ref{label} or Table \ref{label}
+\captionandlabel{##1}{}{##3}}%
+%
+\raggedright\let\captionstyle=\raggedright
+\def\@makecaption##1##2{##1: ##2\par}%  --- Be sure captions aren't centered
+%
+\input\jobname.cap
+}}%                             --- to be followed by \enddocument
+
+
+
+%%%%%%%%%%%%%%%%
+%
+%  Box macros
+%
+%%%%%%%%%%%%%%%%
+%
+% \boxeps[local commands] {file} {scale}
+%
+% options \DVIscaling \figuredirectory \scale \horizscale \vertscale
+% \missingfigure \globalscaling
+%
+% \boxps[local commands] {file} {scale} {width} {height}
+%
+% \scale \horizscale \vertscale 
+
+%
+%  Various `boxers' --- which one is used depends on where the origin
+%  of the picture is.  If you are using the bounding boxes of
+%  encapsulated postscript, just use the default \llboxer.  Otherwise,
+%  you have to figure out where the origin is and set \boxer appropriately.
+%
+
+\def\llboxer#1{\vbox to \figboxht{\vfil\hbox to \figboxwid{#1\hfill}}}
+\def\lcboxer#1{\vbox to \figboxht{\vfil\hbox to \figboxwid{\hfill#1\hfill}}}
+\def\oldboxer#1{\vbox to \figboxht{\vfil
+                      \hbox to \figboxwid{\hfill\llap{#1\hskip4.25in}\hfill}}}
+\def\ulboxer#1{\vbox to \figboxht{\hbox to \figboxwid{#1\hfill}\vfil}}
+\def\ccboxer#1{\vbox to \figboxht{\vfil
+                        \hbox to \figboxwid{\hfill#1\hfill}\vfil}}
+
+% a macro to strip the pt off a dimension
+%
+{\catcode`\p=12\catcode`\t=12
+\gdef\removedimen#1pt{#1}}
+
+\def\defscaled#1#2{#2=\DVIscaling#2%
+\xdef#1{\expandafter\removedimen\the#2}}
+
+\def\DVIspace{ }
+\newdimen\hscalefactor
+\newdimen\vscalefactor
+
+\def\scale#1{\horizscale{#1}\vertscale{#1}}
+\def\horizscale#1{\hscalefactor=#1\hscalefactor\figboxht=#1\figboxht}
+\def\vertscale#1{\vscalefactor=#1\vscalefactor\figboxwid=#1\figboxwid}
+
+%%%%%%%%%%%%%%%%
+%
+
+\def\boxps{%
+\@ifnextchar[{\boxpsaux}{\boxpsaux[\relax]}}
+
+\def\boxpsaux[#1]#2#3#4#5{%
+{\figboxwid#4\figboxht#5\hscalefactor=1pt\vscalefactor=1pt%
+\scale{#3}%
+\scale{\globalscaling}%
+#1%
+\defscaled\DVIhscale\hscalefactor
+\defscaled\DVIvscale\vscalefactor
+\boxer{\special{psfile=\figpsfilename\DVIspace
+                hscale=\DVIhscale\DVIspace 
+                vscale=\DVIvscale}}}%
+}
+
+
+%%%%%%%%%%%%%%%%
+% The following is from tex/inputs/epsf.tex by Tom Rokicki
+% with slight modifications by Jack Snoeyink.
+%
+%   Written by Tomas Rokicki of Radical Eye Software, 29 Mar 1989.
+%
+%   Include an ecapsulated postscript graphic.
+%   Works by finding the bounding box comment.
+%
+\newread\Epsffilein
+\newif\ifEpsffileok
+\newif\ifEpsfbbfound
+
+\newdimen\pspoints
+\pspoints=1in
+\divide\pspoints by 72
+
+
+\def\boxeps{%
+\@ifnextchar[{\boxepsaux}{\boxepsaux[\relax]}}
+\def\boxepsaux[#1]#2#3{%
+%
+%   The first thing we need to do is to open the
+%   PostScript file, if possible.
+%
+%\tracingall
+\gdef\figpsfilename{\figuredirectory/#2.ps}
+\openin\Epsffilein=\figuredirectory/#2.ps
+\ifeof\Epsffilein 
+\gdef\figpsfilename{\figuredirectory/#2.eps}
+\openin\Epsffilein=\figuredirectory/#2.eps \fi
+\ifeof\Epsffilein\message{I couldn't open \figuredirectory/#2.ps or \figpsfilename}%
+\missingfigure{#2}
+\else
+%
+%   Okay, we got it.  Now we scan lines until we find one
+%   that doesn't start with a percentage sign.  We're
+%   looking for the bounding box comment.
+%
+   {\Epsffileoktrue\Epsfbbfoundfalse
+    \catcode`\%=11 \catcode`\\=11
+    \catcode`\{=11 \catcode`\}=11
+    \catcode`\$=11 \catcode`\^=11
+    \catcode`\&=11 \catcode`\#=11
+    \catcode`\~=11 \catcode`\_=11
+    \loop
+       \read\Epsffilein to \Epsffileline
+       \ifeof\Epsffilein\Epsffileokfalse\else
+%
+%   Now we check to make sure the first character is a % sign,
+%   and that the rest are `%BoundingBox:' if necessary.
+%
+          \expandafter\Epsfaux\Epsffileline . .\\%
+       \fi
+   \ifEpsffileok\repeat
+   \ifEpsfbbfound
+        \figboxht=\Epsfury\pspoints
+        \advance\figboxht by-\Epsflly\pspoints
+        \figboxwid=\Epsfurx\pspoints
+        \advance\figboxwid by-\Epsfllx\pspoints
+   \else
+        \message{No bounding box comment in \figpsfilename }%
+        \figboxwid=2in\figboxht=1in%
+   \fi%
+   \immediate\closein\Epsffilein
+   \hscalefactor=1pt\vscalefactor=1pt%
+   \scale{#3}%
+   \scale{\globalscaling}%
+   #1%
+%
+   \defscaled\DVIhscale\hscalefactor
+   \defscaled\DVIvscale\vscalefactor
+%
+   \hscalefactor=-\Epsfllx\hscalefactor
+   \hscalefactor=1.00375\hscalefactor%  --- 72.27/72 = TeXpoints/PSpoints
+   \defscaled\DVIhoffset\hscalefactor
+%
+   \vscalefactor=-\Epsflly\vscalefactor
+   \vscalefactor=1.00375\vscalefactor%  --- 72.27/72 = TeXpoints/PSpoints
+   \defscaled\DVIvoffset\vscalefactor
+%
+   \llboxer{\special{psfile=\figpsfilename\DVIspace
+                hoffset=\DVIhoffset\DVIspace
+                voffset=\DVIvoffset\DVIspace
+                hscale=\DVIhscale\DVIspace 
+                vscale=\DVIvscale}} }%
+\fi
+}%
+%
+%   We need these for comparison purposes.
+%
+{\catcode`\%=11 \global\let\Epsfpar=\par
+\global\let\Epsfpercent=%\global\def\Epsfbblit{%BoundingBox:}}%
+%
+%   This is our function that checks for `%BoundingBox:' and grabs the
+%   values if they are found.
+%
+\long\def\Epsfaux#1#2 #3\\{\relax\ifx#1\Epsfpercent
+   \def\testit{#2}\ifx\testit\Epsfbblit
+      \Epsfsize #3 . . . .\\%
+      \global\Epsffileokfalse
+      \global\Epsfbbfoundtrue
+   \fi\else\ifx#1\Epsfpar\else\global\Epsffileokfalse\fi\fi}%
+%
+%   Here we grab the values and stuff them in the appropriate definitions.
+%
+\def\Epsfsize#1 #2 #3 #4 #5\\{\global\def\Epsfllx{#1}\global\def\Epsflly{#2}%
+   \global\def\Epsfurx{#3}\global\def\Epsfury{#4}}%
+
+
+
+
+\catcode`\@=12                  % done with with internals
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% For backward compatability
+%
+% \pic file; height in inches; width in inches; caption\par
+% \picsc file; ht (in); wid (in); scale; caption\par
+%
+% \mpic file; height in inches; width in inches; caption\par
+% \mpicsc file; ht (in); wid (in); scale; caption\par
+%
+%%%%%%%%%%%%%%%%
+
+\def\pic#1;#2;#3;#4\par{\picsc#1;#2;#3;1;#4\par}% file; wd; ht; caption 
+
+\def\picsc#1;#2;#3;#4;#5\par{% file; wd; ht; scale; caption
+\figbox[htb]{\boxeps{#1}{#4}%{#2in}{#3in}%
+}{figure}{#1}{%
+% (#1: #2x#3 sc #4) %                   Uncomment for debugging
+#5}}
+
+
+\def\mpic#1;#2;#3;#4\par{\mpicsc#1;#2;#3;1;#4\par}% file; wd; ht; caption 
+
+\def\mpicsc#1;#2;#3;#4;#5\par{% file; wd; ht; scale; caption
+\figbox[l]{\boxeps{#1}{#4}%{#2in}{#3in}%
+}{figure}{#1}{%
+% (#1: #2x#3 sc #4) %                   Uncomment for debugging
+#5}}
+

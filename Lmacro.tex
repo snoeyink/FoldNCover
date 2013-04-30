@@ -1,0 +1,103 @@
+% Jack Snoeyink --- LaTeX macros
+
+\input Gmacro.tex
+
+\def\rmop#1(#2){\tomath{\mathop{\mathrm{#1}(#2)}}}
+\def\op#1(#2){\tomath{\mathop{\mathtt{#1}(#2)}}}
+\def\bfop#1(#2){\tomath{\mathop{\mathbf{#1}(#2)}}}
+\def\itop#1(#2){\tomath{\mathop{\mathit{#1}(#2)}}}
+
+\def\NN#1{{\thinspace\small#1)}~\ignorespaces}
+%\def\mchoice#1{{\mathchoice{\hbox{#1}}{\hbox{#1}}{\hbox{\scriptsize
+%#1}}{\hbox{\let\it=\rm\tiny #1}}}}
+
+\newcommand{\singlespace}{\def\baselinestretch{1.0}\Large\normalsize}
+\newcommand{\doublespace}{\def\baselinestretch{1.5}\Large\normalsize}
+\def\blstretch#1{\def\baselinestretch{#1}\Large\normalsize}
+
+\newenvironment{proof}{\begingroup\Proofenv}{\QED\endgroup}
+\def\Proofenv{\penalty100\advance\leftskip by\parindent
+        \advance\leftmargini by\parindent
+        \Proof\ \ignorespaces}
+\def\Proof{\noindent{\bf Proof\/:}\nobreak}
+\def\QED{\unskip~\slug\medbreak}
+\long\def\OMIT#1\end{omitted \end}
+\newenvironment{remark}{\medbreak\begingroup\noindent {\bf
+Remark:\/}}{\smallskip\endgroup} 
+
+\newenvironment{tightlist}
+{\begin{list}{$\scriptstyle\bullet$}{\topsep=1pt\itemsep=0pt\parsep=0pt}}{\end{list}}
+
+\def\marpar#1{{\marginpar{\raggedright\rm\footnotesize#1}}}
+\def\mnote#1{\null\hbox{$\star$}\marpar{$\star$ #1}}
+
+\catcode`\@=11
+\newenvironment{numthm}[1]{\@begintheorem{Theorem}{#1}}{\@endtheorem}
+\newenvironment{numnamethm}[2]
+{\@opargbegintheorem{Theorem}{#1}{#2}}{\@endtheorem}
+
+\def\papertheorems{
+\newtheorem{theorem}{Theorem}
+\newtheorem{thm}[theorem]{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{cor}[theorem]{Corollary}
+\newtheorem{obs}[theorem]{Observation}
+\newtheorem{conj}[theorem]{Conjecture}
+\newtheorem{prob}[theorem]{Problem}
+}
+
+\def\sectiontheorems{
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{thm}[theorem]{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{cor}[theorem]{Corollary}
+\newtheorem{conj}[theorem]{Conjecture}
+\newtheorem{obs}[theorem]{Observation}
+\newtheorem{prob}[theorem]{Problem}
+}
+\papertheorems
+
+\def\draft{
+\setlength{\oddsidemargin}{0pt}
+\setlength{\evensidemargin}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{8.6in}
+\setlength{\textwidth}{6.5in}
+}
+
+\def\eref#1{Eq.~\ref{eq:#1}}
+\def\fref#1{Figure~\ref{fig:#1}}
+\def\sref#1{Section~\ref{sec:#1}}
+\def\ssref#1{Subsection~\ref{sec:#1}}
+\def\tbref#1{Table~\ref{tab:#1}}
+\def\aref#1{Algorithm~\ref{alg:#1}}
+\def\lref#1{Lemma~\ref{lem:#1}}
+\def\tref#1{Theorem~\ref{thm:#1}}
+\def\oref#1{Observation~\ref{obs:#1}}
+
+\def\debugcite{
+\usepackage{showkeys}
+%\let\mycite=\cite
+%\let\myref=\ref
+%\let\mylabel=\label
+%\def\cite##1{\mycite{##1}{\footnotesize [{##1}]}}
+%\def\ref##1{\myref{##1}{\footnotesize [{##1}]}}
+%\def\label##1{\mylabel{##1}{\footnotesize\bf [{##1}]}}
+}
+
+\def\paperify{%
+\long\def\ab##1{}%
+\long\def\pa##1{##1}%
+\let\OMITthruend=\relax%
+\let\OMITtoend=\relax%
+}
+
+\def\abstractify{%
+\long\def\ab##1{##1}%
+\long\def\pa##1{}%
+\long\def\OMITthruend##1\end##2{}%
+\long\def\OMITtoend##1\end##2{\end{##2}}%
+}
+\paperify
+

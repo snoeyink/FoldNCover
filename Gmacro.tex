@@ -1,0 +1,84 @@
+\long\def\ignore#1{\relax}
+
+\def\tomath#1{\relax\ifmmode#1\else$#1$\fi}
+
+\def\th{{\rm th}}
+\def\inv{^{-1}}
+\def\degrees{\tomath{{}^\circ}}
+\let\degree=\degrees
+\def\lf{\left}\def\rt{\right}
+
+\def\rangeone#1#2{\rangethree{#1}12{#2}}
+\def\rangetwo#1#2#3{\tomath{{#1}_{#2},\ldots,{#1}_{#3}}}
+\def\rangethree#1#2#3#4{\tomath{{#1}_{#2},{#1}_{#3},\ldots,{#1}_{#4}}}
+\let\range=\rangetwo
+\def\setone#1#2{\setthree{#1}12{#2}}
+\def\settwo#1#2#3{\tomath{\{{#1}_{#2},\ldots,{#1}_{#3}\}}}
+\def\setthree#1#2#3#4{\tomath{\{{#1}_{#2},{#1}_{#3},\ldots,{#1}_{#4}\}}}
+
+\def\oldO{
+\def\Om(##1){{\tomath{\Omega(##1)}}}
+\def\Th(##1){{\tomath{\Theta(##1)}}}
+\def\Ologn{\O(\log n)}
+\def\Onlogn{\O(n\log n)}
+\def\O(##1){{\tomath{O(##1)}}}
+\def\On##1{\O(n^{##1})}
+}
+
+\def\Om#1{{\tomath{\Omega(#1)}}}
+\def\Th#1{{\tomath{\Theta(#1)}}}
+\def\Ologn{\O{\log n}}
+\def\Onlogn{\O{n\log n}}
+\def\O#1{{\tomath{O(#1)}}}
+\def\On#1{\O{n^{#1}}}
+
+
+\def\Case#1{\noindent {\bf Case #1:\/ }}
+\def\NP{{\sl NP}}
+\def\R{\tomath{{\cal R}}}
+
+\def\etal{{et al.{}}}
+\def\fourldots{\mathinner{\ldotp\ldotp\ldotp\ldotp}}
+\def\fourdots{\relax\ifmmode
+	\fourldots\else$\mathsurround=0pt \fourldots\,$\fi
+	\spacefactor=3000}
+
+
+\def\nopar#1\par{}
+\def\slw #1 {{\sl #1 }}
+\def\itw #1 {{\it #1 }}
+\def\ttw #1 {{\tt #1 }}
+\def\scw #1 {{\sc #1 }}
+\def\bfw #1 {{\bf #1 }}
+\let\bw=\bfw
+\def\calw #1 {\tomath{{\cal #1}} }
+\def\calv#1{\tomath{{\cal #1}}}
+
+
+\def\slug{\vrule height 4pt depth 0pt width 4pt}
+
+\def\joinrel{\mathrel{\mkern-4mu}}% fix longrightarrow et c.
+\def\ray#1{\hbox{\vbox{\offinterlineskip\setbox0\hbox{$#1$}
+	\hbox to \wd0{\hss$\rightharpoonup$\hss}\vskip-1.0pt\box0}}}
+\def\lin#1{\hbox{\vbox{\offinterlineskip\setbox0\hbox{$#1$}
+	\hbox to \wd0{\hss$\longleftrightarrow$\hss}\vskip-1.0pt\box0}}}
+\def\seg#1{\tomath{\overline{#1}}}
+
+\def\paper{paper}% for changing papers to thesis chapters
+
+\long\def\comm#1{\ignorespaces}
+\def\comments{\long\def\comm##1{\message{COMMENT: ##1}{\bf(( ##1 ))}}}
+
+\hyphenation{half-space}
+
+\def\raggedcenter{\advance\leftskip by 0pt plus 40em\rightskip=\leftskip
+   \parfillskip=0pt \spaceskip=.3333em \xspaceskip=.5em
+   \pretolerance=9999 \tolerance=9999
+   \hyphenpenalty=9999 \exhyphenpenalty=9999 }
+
+\long\def\tthdump#1{#1} % Do nothing. The following are not done for TtH.
+\tthdump{%
+%\input Gmacro2.tex
+}
+
+
